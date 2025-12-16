@@ -111,6 +111,12 @@ class CryptoManager:
             with open(input_path, 'rb') as f:
                 encrypted_data = f.read()
             
+            # Validate minimum file size
+            min_size = self.SALT_SIZE + self.IV_SIZE
+            if len(encrypted_data) < min_size:
+                print(f"✗ Error: File is too small to be a valid encrypted file")
+                return False
+            
             # Extract salt, IV, and ciphertext
             salt = encrypted_data[:self.SALT_SIZE]
             iv = encrypted_data[self.SALT_SIZE:self.SALT_SIZE + self.IV_SIZE]
@@ -130,8 +136,24 @@ class CryptoManager:
             # Decrypt the data
             padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
             
-            # Remove PKCS7 padding
+            # Remove PKCS7 padding with validation
+            if len(padded_plaintext) == 0:
+                print(f"✗ Error: Invalid encrypted file")
+                return False
+            
             padding_length = padded_plaintext[-1]
+            
+            # Validate padding
+            if padding_length < 1 or padding_length > self.IV_SIZE:
+                print(f"✗ Error: Invalid password or corrupted file")
+                return False
+            
+            # Check that all padding bytes have the same value
+            padding = padded_plaintext[-padding_length:]
+            if not all(byte == padding_length for byte in padding):
+                print(f"✗ Error: Invalid password or corrupted file")
+                return False
+            
             plaintext = padded_plaintext[:-padding_length]
             
             # Write decrypted file

@@ -52,10 +52,14 @@ class SystemUpdater:
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
+                timeout=3600  # 1 hour timeout
             )
             logging.info("Command executed successfully")
             return True, result.stdout
+        except subprocess.TimeoutExpired:
+            logging.error(f"Command timed out after 3600 seconds")
+            return False, "Command timed out"
         except subprocess.CalledProcessError as e:
             logging.error(f"Command failed: {e.stderr}")
             return False, e.stderr
